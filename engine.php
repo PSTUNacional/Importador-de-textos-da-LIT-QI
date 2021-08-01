@@ -59,8 +59,8 @@ $api_response = wp_remote_post( $url_api, array(
 		'Authorization' => 'Basic ' . base64_encode( $user_wp.':'.$pass_wp )
 	),
 	'body' => array(
-	  'status' => 'draft',
-    'title' => $materia->title->rendered,
+	  	'status' => 'draft',
+    		'title' => $materia->title->rendered,
 		'content' => $materia->content,
 		'slug' => $materia->slug
 	)
