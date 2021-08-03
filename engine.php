@@ -9,7 +9,18 @@ if (isset($_POST['fstatus'])) {
 } else {
     $status = 'draft';
 }
-
+$editoria = $_POST['feditoria'];
+switch ($editoria){
+    case "internacional":
+        $editoria = array('927');
+        break;
+    case "debate":
+        $editoria = array('6986');
+        break;
+    case "socialismo":
+        $editoria = array('936');
+        break;
+}
 /*-----------------------------------
     1.Converte a URL da matéria na URL do JSON.
     2.Recebe o JSON.
@@ -45,7 +56,7 @@ $api_response = wp_remote_post( $url_api, array(
     	'title' => $materia[0]->title->rendered,
 		'content' => $referencia.$materia[0]->content->rendered,
 		'slug' => $materia[0]->slug,
-		'categories' => array('927'),
+		'categories' => $editoria,
     ),
 ) );
 
