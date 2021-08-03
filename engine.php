@@ -1,49 +1,30 @@
 <?php
 
 require('../wp-load.php');
+require('image_importer.php');
 
-/*-----------------------------------
-    Esta função recebe a URL de uma matéria no site da LIT-QI ou do PSTU e retorna o JSON fornecida pela API do WordPress.
------------------------------------*/
-
-function get_json($url)
-{
-    
-    /*------- Inicia o scrap para buscar a URL da API ----------*/
-    
-    $ch = curl_init();
-
-    curl_setopt($ch, CURLOPT_HEADER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 0);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-
-    $data = curl_exec($ch);
-    curl_close($ch);
-
-    $doc = new DOMDocument();
-    @$doc->loadHTML($data);
-
-    $nodes = $doc->getElementsByTagName('link');
-
-    for ($i=0; $i<$nodes->length; $i++){
-        $node = $nodes->item($i);
-        if($node->getAttribute('type') == 'application/json'){
-            $json_url = $node->getAttribute('href');
-        }
-    }
-    
-    /*------- Faz a requisição da URL e retorna o JSON ----------*/
-    $json_data = file_get_contents($json_url);
-    $json_data = json_decode($json_data);
-    
-    return $json_data;
+$url = $_POST['furl'];
+if (isset($_POST['fstatus'])) {
+   $status = $_POST['fstatus'];
+} else {
+    $status = 'draft';
 }
 
-$site = 'http://site.com';
-$materia = get_json($site);
+/*-----------------------------------
+    1.Converte a URL da matéria na URL do JSON.
+    2.Recebe o JSON.
+    3.Prepara o conteúdo da matéria, execeto imagem destacada.
+-----------------------------------*/
+
+$to_insert = 'pt/wp-json/wp/v2/posts?slug=';
+$json_url = str_replace('pt/', $to_insert, $url);
+$materia = file_get_contents($json_url);
+$materia = json_decode($materia);
+
+/*-----------------------------------
+    Cria referência para a postagem original que vai ser inserida no começo do texto.
+-----------------------------------*/
+$referencia = '<p>Publicado originalmente no <a target="_blank" href="'.$url.'">site da LIT-QI</a></p>';
 
 
 /*-----------------------------------
@@ -51,23 +32,56 @@ $materia = get_json($site);
 -----------------------------------*/
 
 $url_api = 'https://pstu.org.br/wp-json/wp/v2/posts';
-$user_wp = 'AAA';
-$pass_wp = 'BBB';
+$user = 'ABC1235'; // Nome de usuário
+$pass = 'XYZ789': // Usar token para acesso. Não usar senha.
 
 $api_response = wp_remote_post( $url_api, array(
- 	'headers' => array(
-		'Authorization' => 'Basic ' . base64_encode( $user_wp.':'.$pass_wp )
+ 	'headers'     => array(
+		'Authorization' => 'Basic ' . base64_encode( $user.':'.$pass ),
 	),
-	'body' => array(
-	  	'status' => 'draft',
-    		'title' => $materia->title->rendered,
-		'content' => $materia->content,
-		'slug' => $materia->slug
-	)
+	'body'        => array(
+	    'status' => $status,
+	    'date_gmt' => $materia[0]->date_gmt,
+    	'title' => $materia[0]->title->rendered,
+		'content' => $referencia.$materia[0]->content->rendered,
+		'slug' => $materia[0]->slug,
+		'categories' => array('927'),
+    ),
 ) );
 
 $body = json_decode( $api_response['body'] );
 
-if( wp_remote_retrieve_response_message( $api_response ) === 'Created' ) {
-	echo 'O post <b> ' . $body->title->rendered . ' </b> foi criado corretamente';
+/*-----------------------------------
+    Este é o ID do post recém criado
+-----------------------------------*/
+
+$newpost_id = $body->id;
+
+/*-----------------------------------
+    1. Baixa a imagem destacada da matéria original.
+    2. Faz upload na galeria.
+    3. Atualiza imagem destacada da matéria recém criada.
+-----------------------------------*/
+
+function km_set_remote_image_as_featured_image( $post_id, $url, $attachment_data = array() ) {
+
+  $download_remote_image = new KM_Download_Remote_Image( $url, $attachment_data );
+  $attachment_id         = $download_remote_image->download();
+
+  if ( ! $attachment_id ) {
+    return false; 
+  }
+
+  return set_post_thumbnail( $post_id, $attachment_id );
 }
+
+$post_id = $newpost_id;
+$url     = $materia[0]->jetpack_featured_media_url;
+
+km_set_remote_image_as_featured_image( $post_id, $url );
+
+/*-----------------------------------
+    Redireciona o usuário para a página de edição do novo post.
+-----------------------------------*/
+
+header('Location: https://www.pstu.org.br/wp-admin/post.php?post='.$body->id.'&action=edit'); 
