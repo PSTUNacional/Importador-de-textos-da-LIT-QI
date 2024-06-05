@@ -365,4 +365,8 @@ class KM_Download_Remote_Image {
 
 		update_post_meta( $this->attachment_id, '_wp_attachment_image_alt', $alt_text );
 	}
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 2a5fd313ae4ab52d875ce0e3ddb9018e8fa98e2c

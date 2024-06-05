@@ -1,5 +1,6 @@
 <?php
 
+// É preciso estar de acordo com o servidor
 require('../wp-load.php');
 require('image_importer.php');
 
@@ -7,8 +8,17 @@ $url = $_POST['furl'];
 if (isset($_POST['fstatus'])) {
    $status = $_POST['fstatus'];
 } else {
-    $status = 'draft';
+    $status = 'draft'; // Define 'rascunho' como padrão em caso de ausência
 }
+
+/*-----------------------------------
+    
+    Essas editorias são definidas
+    pelos respectivos IDs no BD.
+    É preciso adequá-las.
+
+-----------------------------------*/
+
 $editoria = $_POST['feditoria'];
 switch ($editoria){
     case "internacional":
@@ -22,7 +32,7 @@ switch ($editoria){
         break;
 }
 /*-----------------------------------
-    1.Converte a URL da matéria na URL do JSON.
+    1.Converte a URL da matéria na URL da API / JSON.
     2.Recebe o JSON.
     3.Prepara o conteúdo da matéria, execeto imagem destacada.
 -----------------------------------*/
@@ -32,19 +42,16 @@ $json_url = str_replace('pt/', $to_insert, $url);
 $materia = file_get_contents($json_url);
 $materia = json_decode($materia);
 
-/*-----------------------------------
-    Cria referência para a postagem original que vai ser inserida no começo do texto.
------------------------------------*/
+// Adiciona um parágrafo no início para fazer o link cruzado de referência
 $referencia = '<p>Publicado originalmente no <a target="_blank" href="'.$url.'">site da LIT-QI</a></p>';
-
 
 /*-----------------------------------
     Aqui o post é preparado e executado
 -----------------------------------*/
 
-$url_api = 'https://pstu.org.br/wp-json/wp/v2/posts';
-$user = 'ABC1235'; // Nome de usuário
-$pass = 'XYZ789': // Usar token para acesso. Não usar senha.
+$url_api = 'https://pstu.org.br/wp-json/wp/v2/posts'; // Substitua pela API destino
+$user = '__INSERT__YOUR__USERNAME__';
+$pass = '__INSERT__YOUR__TOKEN__HERE__'; // Existe um pliugin que gera tokens de autorização para usuários.
 
 $api_response = wp_remote_post( $url_api, array(
  	'headers'     => array(
